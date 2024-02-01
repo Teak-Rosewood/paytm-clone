@@ -2,7 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const z = require("zod");
 const { JWT_SECRET, SALTROUNDS } = require("../config");
-const { User } = require("../db.js");
+const { User, Account } = require("../db.js");
 const { authMiddleware } = require("../middleware.js");
 const bcrypt = require("bcrypt");
 const userRoute = express.Router();
@@ -48,6 +48,11 @@ userRoute.post("/signup", async (req, res) => {
         lastName: req.body.lastName,
     });
     const userId = user._id;
+
+    await Account.create({
+        userId: userId,
+        balance: 1 + Math.random() * 10000,
+    });
 
     const token = jwt.sign(
         {
@@ -109,7 +114,6 @@ userRoute.get("/", authMiddleware, async (req, res) => {
             message: "Error while updating information",
         });
     }
-    console.log(req.body);
     await User.updateOne(
         {
             _id: req.userId,
@@ -122,7 +126,7 @@ userRoute.get("/", authMiddleware, async (req, res) => {
     });
 });
 
-userRoute.get("/bulk", async (req, res) => {
+userRoute.get("/bulk", authMiddleware, async (req, res) => {
     const filter = req.query.filter || "";
 
     const users = await User.find({
